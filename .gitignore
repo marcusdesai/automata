@@ -1,0 +1,22 @@
+# Misc
+*.log
+
+# Python
+htmlcov/
+.coverage
+.coverage.*
+.cache
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+__pycache__/
+venv/
+*.egg-info/
+build/
+
+# JetBrains
+.idea/
+*.iml
+
+# Mac
+*.DS_STORE
