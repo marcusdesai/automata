@@ -102,6 +102,7 @@ line-length = 88
 # list below.
 extra-standard-library = [
     # third-party
+    "pytest",
     # first-party
     "automata",
 ]

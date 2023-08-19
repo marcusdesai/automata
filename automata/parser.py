@@ -1,7 +1,9 @@
+__all__ = ["Parser"]
+
 from automata.tree import Alt, Concat, Node, Star, Symbol
 from typing import Final
 
-ERR_MSG: Final[str] = "expected: {} at index: {}, found: '{}'"
+ERR_MSG: Final[str] = "expected: {} at index: {}, found: {}"
 
 
 class Parser:
@@ -9,6 +11,7 @@ class Parser:
         self.pos = 0
         self.tokens = list(string)
         self.symbol_count = 1
+        self.paren_count = 0
 
     def inc(self) -> None:
         self.pos += 1
@@ -21,39 +24,43 @@ class Parser:
         self.symbol_count += 1
         return index
 
-    def parse(self) -> Node:
+    def parse_atom(self) -> Node:
         if self.next() == "(":
+            self.paren_count += 1
             self.inc()
-            left = self.parse()
+            expr = self.parse()
             if (char := self.next()) != ")":
                 raise SyntaxError(ERR_MSG.format("')'", self.pos, char))
+            self.paren_count -= 1
             self.inc()
-        else:
-            if (sym := self.next()) in {")", "|", "*"}:
-                raise SyntaxError(ERR_MSG.format("symbol", self.pos, sym))
-            self.inc()
-            left = Symbol(sym, self.symbol_index())
+            return expr
+
+        if (sym := self.next()) in {")", "|", "*"}:
+            raise SyntaxError(ERR_MSG.format("symbol", self.pos, f"'{sym}'"))
+        if sym is None:
+            raise SyntaxError(ERR_MSG.format("symbol", self.pos, "empty string"))
+        self.inc()
+        return Symbol(sym, self.symbol_index())
+
+    def parse_unary(self) -> Node:
+        atom = self.parse_atom()
         if self.next() == "*":
             self.inc()
-            left = Star(left)
-        if self.next() not in {"|", ")", None}:
-            left = Concat(left, self.parse())
+            return Star(atom)
+        return atom
+
+    def parse_binary(self) -> Node:
+        left = self.parse_unary()
         if self.next() == "|":
             self.inc()
-            left = Alt(left, self.parse())
+            return Alt(left, self.parse_binary())
         return left
 
-
-if __name__ == "__main__":
-    zz = Parser("a(ba)*b|a")
-    e = zz.parse()
-    print(e)
-
-    result = Concat(
-        Symbol("a", 1),
-        Concat(
-            Star(Concat(Symbol("b", 2), Symbol("a", 3))),
-            Alt(Symbol("b", 4), Symbol("a", 5))
-        )
-    )
-    print(result == e)
+    def parse(self) -> Node:
+        left = self.parse_binary()
+        if self.next() == ")" and self.paren_count == 0:
+            msg = f"unexpected close paren at index: {self.pos}"
+            raise SyntaxError(msg)
+        if self.next() not in {"|", ")", None}:
+            return Concat(left, self.parse())
+        return left

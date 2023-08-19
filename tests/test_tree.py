@@ -1,5 +1,5 @@
+from automata.automata import PositionAutomata
 from automata.tree import *
-from automata.position import PositionAutomata
 
 
 def test_concat_symbols_follow():

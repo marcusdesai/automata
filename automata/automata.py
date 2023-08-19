@@ -1,3 +1,5 @@
+__all__ = ["Automata", "PositionAutomata"]
+
 from abc import ABC, abstractmethod
 from automata.tree import Node
 
