@@ -1,4 +1,5 @@
-from automata.position import *
+from automata.tree import *
+from automata.position import PositionAutomata
 
 
 def test_concat_symbols_follow():
@@ -43,4 +44,5 @@ class TestExampleOne:
         assert self.regex_ast.follow() == {(1, 2), (2, 3), (2, 4), (3, 3), (3, 4), (4, 2)}
 
     def test_delta(self):
-        assert self.regex_ast.delta_pos(2, "a") == {3}
+        a_pos = PositionAutomata(self.regex_ast)
+        assert a_pos.transition(2, "a") == {3}
