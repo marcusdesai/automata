@@ -1,10 +1,17 @@
-__all__ = ["Automata", "PositionAutomata"]
+__all__ = ["Automata", "PositionAutomata", "match_re"]
 
 from abc import ABC, abstractmethod
+from automata.parser import Parser
 from automata.tree import Node
+from typing import Self
 
 
 class Automata(ABC):
+    @classmethod
+    @abstractmethod
+    def from_node(cls, node: Node) -> Self:
+        raise NotImplementedError
+
     @property
     @abstractmethod
     def final(self) -> set[int]:
@@ -29,11 +36,15 @@ class Automata(ABC):
 
 
 class PositionAutomata(Automata):
-    def __init__(self, regex: Node) -> None:
-        self.pos = regex.pos()
-        self.first = regex.first()
-        self.last_0 = regex.last_0()
-        self.follow = regex.follow()
+    def __init__(self, node: Node) -> None:
+        self.pos = node.pos()
+        self.first = node.first()
+        self.last_0 = node.last_0()
+        self.follow = node.follow()
+
+    @classmethod
+    def from_node(cls, node: Node) -> Self:
+        return cls(node)
 
     @property
     def initial(self) -> set[int]:
@@ -47,3 +58,9 @@ class PositionAutomata(Automata):
         if index == 0:
             return self.first
         return {j for i, j in self.follow if i == index and self.pos[j] == symbol}
+
+
+def match_re(pattern: str, string: str, engine: type[Automata] = PositionAutomata) -> bool:
+    node = Parser(pattern).parse()
+    auto = engine.from_node(node)
+    return auto.accepts(string)

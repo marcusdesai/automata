@@ -2,8 +2,9 @@ import pytest
 from automata.parser import *
 from automata.tree import *
 
-TEST_SUCCEEDS = {
+PARSE_SUCCEEDS = {
     "a": Symbol("a", 1),
+    "(a)": Symbol("a", 1),
     "ab": Concat(Symbol("a", 1), Symbol("b", 2)),
     "a*": Star(Symbol("a", 1)),
     "a|b": Alt(Symbol("a", 1), Symbol("b", 2)),
@@ -49,17 +50,19 @@ TEST_SUCCEEDS = {
 }
 
 
-@pytest.mark.parametrize("string, result", TEST_SUCCEEDS.items())
-def test_parse(string: str, result: Node):
+@pytest.mark.parametrize("string, result", PARSE_SUCCEEDS.items())
+def test_parse_success(string: str, result: Node):
     assert Parser(string).parse() == result
 
 
-TEST_FAILS = [
+PARSE_FAILS = [
     "",
     "(",
     ")",
     "*",
     "|",
+    "*a",
+    "|a",
     "()",
     "a|)",
     "a)",
@@ -69,10 +72,11 @@ TEST_FAILS = [
     "a(bc)*)*",
     "a||b",
     "a**",
+    "a|()",
 ]
 
 
-@pytest.mark.parametrize("string", TEST_FAILS)
-def test_fail(string: str):
+@pytest.mark.parametrize("string", PARSE_FAILS)
+def test_parse_fail(string: str):
     with pytest.raises(SyntaxError):
         print(Parser(string).parse())

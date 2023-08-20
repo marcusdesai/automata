@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from itertools import product
 
 
-@dataclass
+@dataclass(frozen=True)
 class Node(ABC):
     @property
     @abstractmethod
@@ -34,7 +34,7 @@ class Node(ABC):
         raise NotImplementedError
 
 
-@dataclass
+@dataclass(frozen=True)
 class Symbol(Node):
     value: str
     index: int
@@ -56,7 +56,7 @@ class Symbol(Node):
         return {self.index: self.value}
 
 
-@dataclass
+@dataclass(frozen=True)
 class Star(Node):
     child: Node
 
@@ -78,7 +78,7 @@ class Star(Node):
         return self.child.pos()
 
 
-@dataclass
+@dataclass(frozen=True)
 class Concat(Node):
     left: Node
     right: Node
@@ -105,7 +105,7 @@ class Concat(Node):
         return self.left.pos() | self.right.pos()
 
 
-@dataclass
+@dataclass(frozen=True)
 class Alt(Node):
     left: Node
     right: Node

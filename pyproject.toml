@@ -74,7 +74,7 @@ ignore = [
 line-length = 88
 
 [tool.ruff.per-file-ignores]
-"test_*.py" = [
+"**/tests/*" = [
     # Test functions do not need full annotation
     "ANN",
     # Test lines can be too long
@@ -105,4 +105,5 @@ extra-standard-library = [
     "pytest",
     # first-party
     "automata",
+    "tests",
 ]
