@@ -1,4 +1,4 @@
-__all__ = ["Automata", "PositionAutomata", "match_re"]
+__all__ = ["Automata", "PositionAutomata", "automata_match"]
 
 from abc import ABC, abstractmethod
 from automata.parser import Parser
@@ -56,11 +56,13 @@ class PositionAutomata(Automata):
 
     def transition(self, index: int, symbol: str) -> set[int]:
         if index == 0:
-            return self.first
+            return {j for j in self.first if self.pos[j] == symbol}
         return {j for i, j in self.follow if i == index and self.pos[j] == symbol}
 
 
-def match_re(pattern: str, string: str, engine: type[Automata] = PositionAutomata) -> bool:
+def automata_match(
+    pattern: str, string: str, engine: type[Automata] = PositionAutomata
+) -> bool:
     node = Parser(pattern).parse()
     auto = engine.from_node(node)
     return auto.accepts(string)

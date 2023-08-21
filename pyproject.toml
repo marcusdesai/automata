@@ -9,7 +9,6 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = [
-    "black == 23.7.0",
     "pytest == 7.4.0",
     "pytest-cov == 4.1.0",
     "ruff == 0.0.280",
@@ -105,5 +104,4 @@ extra-standard-library = [
     "pytest",
     # first-party
     "automata",
-    "tests",
 ]

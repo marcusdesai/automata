@@ -16,7 +16,22 @@ REGEX_MATCHES = {
 
 @pytest.mark.parametrize("regex, match", ((r, m) for r, ml in REGEX_MATCHES.items() for m in ml))
 def test_regex_matches(regex: str, match: str):
-    assert match_re(regex, match)
+    assert automata_match(regex, match)
+
+
+REGEX_NON_MATCHES = {
+    "a": ["b"],
+    "ab": ["a"],
+    "a*": ["b", "bbb"],
+    "a|b": ["c", "ab"],
+    "(a*)*b": ["a", "aa"],
+}
+
+
+@pytest.mark.parametrize("regex, non_match", ((r, m) for r, ml in REGEX_NON_MATCHES.items() for m in ml))
+def test_regex_non_matches(regex: str, non_match: str):
+    print(automata_match(regex, non_match))
+    assert not automata_match(regex, non_match)
 
 
 def make_match(node: Node) -> str:
@@ -24,7 +39,7 @@ def make_match(node: Node) -> str:
         case Symbol(sym, _):
             return sym
         case Star(node):
-            return ''.join(make_match(node) for _ in range(random.randrange(10)))
+            return "".join(make_match(node) for _ in range(random.randrange(10)))
         case Concat(left, right):
             return f"{make_match(left)}{make_match(right)}"
         case Alt(left, right):
@@ -33,23 +48,25 @@ def make_match(node: Node) -> str:
             return make_match(right)
 
 
-MATCHES = {
+MADE_MATCHES = {
     "a": {"a"},
     "ab": {"ab"},
     "a|b": {"a", "b"},
-    "a*": {"a" * i for i in range(50)},
+    "a*": {"a" * i for i in range(10)},
     "a(b|c)d": {"abd", "acd"},
+    "a(ba)*b|a": {"ab", "aa", "abab", "ababab", "abaa"},
 }
 
 
-@pytest.mark.parametrize("regex, matches", MATCHES.items())
+@pytest.mark.parametrize("regex, matches", MADE_MATCHES.items())
 def test_make_match(regex: str, matches: set[str]):
     node = Parser(regex).parse()
-    made_matches = {make_match(node) for _ in range(10)}
-    assert made_matches.issubset(matches)
+    # We've probably made enough examples in 100 iterations
+    made_matches = {make_match(node) for _ in range(100)}
+    assert matches.issubset(made_matches)
 
 
-REGEXES = [
+PATTERNS = [
     "a*b",
     "ba|b",
     "b|ab",
@@ -64,13 +81,18 @@ REGEXES = [
     "a*b*",
 ]
 
-AUTOMATED_MATCHES = (
-    (r, m) for r in REGEXES
-    for m in (make_match(Parser(r).parse()) for _ in range(10))
-)
+GENERATED_MATCHES = [
+    (pattern, match) for pattern in PATTERNS
+    for match in (make_match(Parser(pattern).parse()) for _ in range(10))
+]
+
+ENGINES = [PositionAutomata]
+
+CHECKS = ((pat, match, eng) for pat, match in GENERATED_MATCHES for eng in ENGINES)
 
 
-@pytest.mark.parametrize("regex, match", AUTOMATED_MATCHES)
-def test_regex_matches_constructed(regex: str, match: str):
-    assert re.match(regex, match) is not None
-    assert match_re(regex, match)
+@pytest.mark.parametrize("pattern, match, engine", CHECKS)
+def test_generated_matches(pattern: str, match: str, engine: type[Automata]):
+    # Always check conformance to Python's stdlib regex matching
+    assert re.match(pattern, match) is not None
+    assert automata_match(pattern, match, engine=engine)

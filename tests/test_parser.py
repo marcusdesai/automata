@@ -79,4 +79,4 @@ PARSE_FAILS = [
 @pytest.mark.parametrize("string", PARSE_FAILS)
 def test_parse_fail(string: str):
     with pytest.raises(SyntaxError):
-        print(Parser(string).parse())
+        Parser(string).parse()
