@@ -7,7 +7,6 @@ from itertools import product
 
 @dataclass(frozen=True)
 class Node(ABC):
-    @property
     @abstractmethod
     def nullable(self) -> bool:
         raise NotImplementedError
@@ -39,7 +38,6 @@ class Symbol(Node):
     value: str
     index: int
 
-    @property
     def nullable(self) -> bool:
         return False
 
@@ -60,7 +58,6 @@ class Symbol(Node):
 class Star(Node):
     child: Node
 
-    @property
     def nullable(self) -> bool:
         return True
 
@@ -83,17 +80,16 @@ class Concat(Node):
     left: Node
     right: Node
 
-    @property
     def nullable(self) -> bool:
-        return self.left.nullable and self.right.nullable
+        return self.left.nullable() and self.right.nullable()
 
     def first(self) -> set[int]:
-        if self.left.nullable:
+        if self.left.nullable():
             return self.left.first() | self.right.first()
         return self.left.first()
 
     def last(self) -> set[int]:
-        if self.right.nullable:
+        if self.right.nullable():
             return self.left.last() | self.right.last()
         return self.right.last()
 
@@ -110,9 +106,8 @@ class Alt(Node):
     left: Node
     right: Node
 
-    @property
     def nullable(self) -> bool:
-        return self.left.nullable or self.right.nullable
+        return self.left.nullable() or self.right.nullable()
 
     def first(self) -> set[int]:
         return self.left.first() | self.right.first()
