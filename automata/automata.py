@@ -56,8 +56,10 @@ class PositionAutomata(Automata):
 
     def transition(self, index: int, symbol: str) -> set[int]:
         if index == 0:
-            return {j for j in self.first if self.pos[j] == symbol}
-        return {j for i, j in self.follow if i == index and self.pos[j] == symbol}
+            follow_i = self.first
+        else:
+            follow_i = {j for i, j in self.follow if i == index}
+        return {j for j in follow_i if self.pos[j] == symbol}
 
 
 def automata_match(
