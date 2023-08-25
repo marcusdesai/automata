@@ -7,60 +7,94 @@ ERR_MSG: Final[str] = "expected: {} at index: {}, found: {}"
 
 
 class Parser:
+    """
+    Implements the following grammar:
+
+    <expr>   ::= <binary> | <binary> <expr>
+    <binary> ::= <unary>  | <unary> "|" <binary>
+    <unary>  ::= <atom>   | <atom> "*"
+    <atom>   ::= <char>   | "(" <expr> ")"
+
+    The entrypoint is Parser.parse. This function must only be called once per
+    instance of parser. Multiple calls will result in incorrect results beyond
+    the first call.
+    """
+
     def __init__(self, string: str) -> None:
         self.pos = 0
         self.tokens = list(string)
         self.symbol_count = 1
         self.paren_count = 0
 
-    def inc(self) -> None:
+    def _inc(self) -> None:
         self.pos += 1
 
-    def next(self) -> str | None:
+    def _next(self) -> str | None:
         return None if self.pos >= len(self.tokens) else self.tokens[self.pos]
 
-    def symbol_index(self) -> int:
+    def _symbol_index(self) -> int:
+        """Provides a unique number for a symbol index when called."""
         index = self.symbol_count
         self.symbol_count += 1
         return index
 
-    def parse_atom(self) -> Node:
-        if self.next() == "(":
+    def _parse_atom(self) -> Node:
+        char = self._next()
+        self._inc()
+
+        # "(" <expr> ")"
+        if char == "(":
             self.paren_count += 1
-            self.inc()
             expr = self.parse()
-            if (char := self.next()) != ")":
+            if (char := self._next()) != ")":
                 raise SyntaxError(ERR_MSG.format("')'", self.pos, char))
             self.paren_count -= 1
-            self.inc()
+            self._inc()
             return expr
 
-        if (sym := self.next()) in {")", "|", "*"}:
-            raise SyntaxError(ERR_MSG.format("symbol", self.pos, f"'{sym}'"))
-        if sym is None:
+        if char in {")", "|", "*"}:
+            raise SyntaxError(ERR_MSG.format("symbol", self.pos, f"'{char}'"))
+        if char is None:
             raise SyntaxError(ERR_MSG.format("symbol", self.pos, "empty string"))
-        self.inc()
-        return Symbol(sym, self.symbol_index())
 
-    def parse_unary(self) -> Node:
-        atom = self.parse_atom()
-        if self.next() == "*":
-            self.inc()
+        # <char>
+        return Symbol(char, self._symbol_index())
+
+    def _parse_unary(self) -> Node:
+        atom = self._parse_atom()
+
+        # <atom> "*"
+        if self._next() == "*":
+            self._inc()
             return Star(atom)
+
+        # <atom>
         return atom
 
-    def parse_binary(self) -> Node:
-        left = self.parse_unary()
-        if self.next() == "|":
-            self.inc()
-            return Alt(left, self.parse_binary())
-        return left
+    def _parse_binary(self) -> Node:
+        unary = self._parse_unary()
+
+        # <unary> "|" <binary>
+        if self._next() == "|":
+            self._inc()
+            return Alt(unary, self._parse_binary())
+
+        # <unary>
+        return unary
 
     def parse(self) -> Node:
-        left = self.parse_binary()
-        if self.next() == ")" and self.paren_count == 0:
+        """
+        Parses the string given to the Parser. Multiple calls to this function
+        will result in incorrect results beyond the first call.
+        """
+        binary = self._parse_binary()
+        if self._next() == ")" and self.paren_count == 0:
             msg = f"unexpected close paren at index: {self.pos}"
             raise SyntaxError(msg)
-        if self.next() not in {"|", ")", None}:
-            return Concat(left, self.parse())
-        return left
+
+        # <binary> <expr>
+        if self._next() not in {"|", ")", None}:
+            return Concat(binary, self.parse())
+
+        # <binary>
+        return binary

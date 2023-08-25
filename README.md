@@ -2,7 +2,7 @@
 
 Welcome! This is the companion repo to my [series][part-1] of blog posts on constructing [automata][automata] from regexes.
 
-This repo contains one package: `automata`, implemented in Python 3.11, which has the following layout (consult each module for more info on its contents):
+This repo contains one package: `automata`, implemented in Python 3.11, which has the following layout:
 
 - `tree.py` contains the Abstract Syntax Tree that we parse regex strings (e.g. `"a|b*"`) into.
 - `parser.py` unsurprisingly contains this parser.

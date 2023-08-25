@@ -20,7 +20,7 @@ class Node(ABC):
         raise NotImplementedError
 
     def last_0(self) -> set[int]:
-        if self.nullable:
+        if self.nullable():
             return self.last() | {0}
         return self.last()
 

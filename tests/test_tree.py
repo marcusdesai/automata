@@ -75,7 +75,7 @@ TREES = {
 class Tests:
     @pytest.mark.parametrize("node, nullable", ((n, d["nullable"]) for n, d in TREES.items()))
     def test_nullable(self, node: Node, nullable: bool):
-        assert node.nullable is nullable
+        assert node.nullable() is nullable
 
     @pytest.mark.parametrize("node, first", ((n, d["first"]) for n, d in TREES.items()))
     def test_first(self, node: Node, first: set[int]):

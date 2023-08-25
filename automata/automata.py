@@ -63,6 +63,9 @@ class PositionAutomata(Automata):
 def automata_match(
     pattern: str, string: str, engine: type[Automata] = PositionAutomata
 ) -> bool:
+    # special case empty pattern, we cannot parse empty strings
+    if pattern == "":
+        return string == ""
     node = Parser(pattern).parse()
     auto = engine.from_node(node)
     return auto.accepts(string)
