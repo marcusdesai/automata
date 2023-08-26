@@ -4,13 +4,22 @@ Welcome! This is the companion repo to my [series][part-1] of blog posts on cons
 
 ## Setup
 
-In the root dir of this repo run:
+In the root dir of this repo:
 
-`pip install -e ".[dev]"`
+```bash
+# to install
+pip install -e ".[dev]"
+
+# run tests
+pytest
+
+# test with coverage
+pytest --cov=automata --cov-branch --cov-report=term
+```
 
 ## Layout
 
-This repo contains one package: `automata`, implemented in Python 3.11, which has the following layout:
+This repo contains one package: `automata`, implemented in Python 3.11, which has the following layout.
 
 - `tree.py` contains the Abstract Syntax Tree that we parse regex strings (e.g. `"a|b*"`) into.
 - `parser.py` unsurprisingly contains this parser.

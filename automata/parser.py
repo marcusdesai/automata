@@ -10,57 +10,54 @@ class Parser:
     """
     Implements the following grammar:
 
-    <expr>   ::= <binary> | <binary> <expr>
-    <binary> ::= <unary>  | <unary> "|" <binary>
-    <unary>  ::= <atom>   | <atom> "*"
-    <atom>   ::= <char>   | "(" <expr> ")"
-
-    The entrypoint is Parser.parse. This function must only be called once per
-    instance of parser. Multiple calls will result in incorrect results beyond
-    the first call.
+    <alt>    ::= <concat> | <concat> "|" <alt>
+    <concat> ::= <star>   | <star> <concat>
+    <star>   ::= <atom>   | <atom> "*"
+    <atom>   ::= <char>   | "(" <alt> ")"
     """
 
     def __init__(self, string: str) -> None:
-        self.pos = 0
-        self.tokens = list(string)
-        self.symbol_count = 1
-        self.paren_count = 0
+        self._pos = 0
+        self._tokens = list(string)
+        self._symbol_count = 1
+        self._paren_count = 0
+        self._parsed: Node | None = None
 
     def _inc(self) -> None:
-        self.pos += 1
+        self._pos += 1
 
     def _next(self) -> str | None:
-        return None if self.pos >= len(self.tokens) else self.tokens[self.pos]
+        return None if self._pos >= len(self._tokens) else self._tokens[self._pos]
 
     def _symbol_index(self) -> int:
         """Provides a unique number for a symbol index when called."""
-        index = self.symbol_count
-        self.symbol_count += 1
+        index = self._symbol_count
+        self._symbol_count += 1
         return index
 
     def _parse_atom(self) -> Node:
         char = self._next()
         self._inc()
 
-        # "(" <expr> ")"
+        # "(" <alt> ")"
         if char == "(":
-            self.paren_count += 1
-            expr = self.parse()
+            self._paren_count += 1
+            alt = self._parse_alt()
             if (char := self._next()) != ")":
-                raise SyntaxError(ERR_MSG.format("')'", self.pos, char))
-            self.paren_count -= 1
+                raise SyntaxError(ERR_MSG.format("')'", self._pos, char))
+            self._paren_count -= 1
             self._inc()
-            return expr
+            return alt
 
         if char in {")", "|", "*"}:
-            raise SyntaxError(ERR_MSG.format("symbol", self.pos, f"'{char}'"))
+            raise SyntaxError(ERR_MSG.format("symbol", self._pos, f"'{char}'"))
         if char is None:
-            raise SyntaxError(ERR_MSG.format("symbol", self.pos, "empty string"))
+            raise SyntaxError(ERR_MSG.format("symbol", self._pos, "empty string"))
 
         # <char>
         return Symbol(char, self._symbol_index())
 
-    def _parse_unary(self) -> Node:
+    def _parse_star(self) -> Node:
         atom = self._parse_atom()
 
         # <atom> "*"
@@ -71,30 +68,34 @@ class Parser:
         # <atom>
         return atom
 
-    def _parse_binary(self) -> Node:
-        unary = self._parse_unary()
+    def _parse_concat(self) -> Node:
+        star = self._parse_star()
 
-        # <unary> "|" <binary>
-        if self._next() == "|":
-            self._inc()
-            return Alt(unary, self._parse_binary())
+        # <star> <concat>
+        if self._next() not in {"|", ")", None}:
+            return Concat(star, self._parse_concat())
 
-        # <unary>
-        return unary
+        # <star>
+        return star
 
-    def parse(self) -> Node:
-        """
-        Parses the string given to the Parser. Multiple calls to this function
-        will result in incorrect results beyond the first call.
-        """
-        binary = self._parse_binary()
-        if self._next() == ")" and self.paren_count == 0:
-            msg = f"unexpected close paren at index: {self.pos}"
+    def _parse_alt(self) -> Node:
+        concat = self._parse_concat()
+        if self._next() == ")" and self._paren_count == 0:
+            msg = f"unexpected close paren at index: {self._pos}"
             raise SyntaxError(msg)
 
-        # <binary> <expr>
-        if self._next() not in {"|", ")", None}:
-            return Concat(binary, self.parse())
+        # <concat> "|" <alt>
+        if self._next() == "|":
+            self._inc()
+            return Alt(concat, self._parse_alt())
 
-        # <binary>
-        return binary
+        # <concat>
+        return concat
+
+    def parse(self) -> Node:
+        """Returns the `Node` parsed from the given string."""
+        # since multiple calls to _parse_alt would fail after the first, we
+        # cache the result and return that on subsequent calls.
+        if self._parsed is None:
+            self._parsed = self._parse_alt()
+        return self._parsed

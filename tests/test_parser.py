@@ -5,13 +5,14 @@ from automata.tree import *
 PARSE_SUCCEEDS = {
     "a": Symbol("a", 1),
     "(a)": Symbol("a", 1),
+    "((a))": Symbol("a", 1),
     "ab": Concat(Symbol("a", 1), Symbol("b", 2)),
     "a*": Star(Symbol("a", 1)),
     "a|b": Alt(Symbol("a", 1), Symbol("b", 2)),
     "aa": Concat(Symbol("a", 1), Symbol("a", 2)),
     "a*b": Concat(Star(Symbol("a", 1)), Symbol("b", 2)),
-    "ba|b": Concat(Symbol("b", 1), Alt(Symbol("a", 2), Symbol("b", 3))),
-    "b|ab": Concat(Alt(Symbol("b", 1), Symbol("a", 2)), Symbol("b", 3)),
+    "ba|b": Alt(Concat(Symbol("b", 1), Symbol("a", 2)), Symbol("b", 3)),
+    "b|ab": Alt(Symbol("b", 1), Concat(Symbol("a", 2), Symbol("b", 3))),
     "b|a|b": Alt(Symbol("b", 1), Alt(Symbol("a", 2), Symbol("b", 3))),
     "b|a*|b": Alt(Symbol("b", 1), Alt(Star(Symbol("a", 2)), Symbol("b", 3))),
 
@@ -22,12 +23,14 @@ PARSE_SUCCEEDS = {
         Symbol("a", 1),
         Alt(Concat(Star(Symbol("b", 2)), Symbol("c", 3)), Symbol("a", 4))
     ),
-    "a(ba)*b|a": Concat(
-        Symbol("a", 1),
+
+    "a(ba)*b|a": Alt(
         Concat(
-            Star(Concat(Symbol("b", 2), Symbol("a", 3))),
-            Alt(Symbol("b", 4), Symbol("a", 5))
-        )
+            Symbol("a", 1),
+            Concat(
+                Star(Concat(Symbol("b", 2), Symbol("a", 3))),
+                Symbol("b", 4))),
+        Symbol("a", 5)
     ),
 
     "a(ba*b)*": Concat(
@@ -41,12 +44,23 @@ PARSE_SUCCEEDS = {
         ))
     ),
 
-    "a|b*a": Concat(
-        Alt(Symbol("a", 1), Star(Symbol("b", 2))),
-        Symbol("a", 3)
+    "a|b*a": Alt(
+        Symbol("a", 1),
+        Concat(Star(Symbol("b", 2)), Symbol("a", 3)),
     ),
 
     "a*b*": Concat(Star(Symbol("a", 1)), Star(Symbol("b", 2))),
+
+    "ae|bf|cg|dh": Alt(
+        Concat(Symbol("a", 1), Symbol("e", 2)),
+        Alt(
+            Concat(Symbol("b", 3), Symbol("f", 4)),
+            Alt(
+                Concat(Symbol("c", 5), Symbol("g", 6)),
+                Concat(Symbol("d", 7), Symbol("h", 8))
+            )
+        )
+    ),
 }
 
 
@@ -73,6 +87,8 @@ PARSE_FAILS = [
     "a||b",
     "a**",
     "a|()",
+    "(((a))))",
+    "((((a)))",
 ]
 
 
@@ -80,3 +96,9 @@ PARSE_FAILS = [
 def test_parse_fail(string: str):
     with pytest.raises(SyntaxError):
         Parser(string).parse()
+
+
+def test_parse_cache():
+    pattern = "a*b|c(aa)*d|a|z"
+    parser = Parser(pattern)
+    assert parser.parse() is parser.parse()
