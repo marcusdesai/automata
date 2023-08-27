@@ -1,7 +1,7 @@
 import pytest
 import random
 import re
-from automata.automata import *
+from automata.impl import *
 from automata.parser import Parser
 from automata.tree import *
 from collections.abc import Iterator

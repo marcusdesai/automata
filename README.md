@@ -23,7 +23,7 @@ This repo contains one package: `automata`, implemented in Python 3.11, which ha
 
 - `tree.py` contains the Abstract Syntax Tree that we parse regex strings (e.g. `"a|b*"`) into.
 - `parser.py` unsurprisingly contains this parser.
-- `automata.py` includes an abstract base class for all the automata that we will define, along with concrete automata class implementations.
+- `impl.py` includes an abstract base class for all the automata that we will define, along with concrete automata class implementations.
 
 Expect the `main` branch of this repo to be updated as I publish more posts in the series. Each post which has companion code specific to that post will have it's own branch in the repo containing the code developed up to that point, not all posts will have companion code.
 
