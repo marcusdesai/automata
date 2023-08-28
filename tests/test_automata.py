@@ -6,7 +6,7 @@ from automata.parser import Parser
 from automata.tree import *
 from collections.abc import Iterator
 
-ENGINES = [PositionAutomata]
+ENGINES = [PositionAutomata, FollowAutomata]
 
 REGEX_NON_MATCHES = {
     "a": ["b"],
@@ -26,7 +26,7 @@ def generate_non_matches() -> Iterator[tuple[str, str, type[Automata]]]:
 
 @pytest.mark.parametrize("pattern, non_match, engine", generate_non_matches())
 def test_non_matches(pattern: str, non_match: str, engine: type[Automata]):
-    assert not automata_match(pattern, non_match)
+    assert not automata_match(pattern, non_match, engine)
 
 
 PATTERNS = {
@@ -50,6 +50,7 @@ PATTERNS = {
     "a*b*",
     "(ac*)*|b*ac",
     "ae|bf|cg|dh",
+    "(a|b)(a*|ba*|b*)*",
 }
 
 
