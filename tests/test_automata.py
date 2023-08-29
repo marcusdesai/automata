@@ -6,7 +6,7 @@ from automata.parser import Parser
 from automata.tree import *
 from collections.abc import Iterator
 
-ENGINES = [PositionAutomata, FollowAutomata]
+ENGINES = [PositionAutomata, FollowAutomata, MarkBeforeAutomata]
 
 REGEX_NON_MATCHES = {
     "a": ["b"],

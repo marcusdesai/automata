@@ -1,4 +1,10 @@
-__all__ = ["Automata", "FollowAutomata", "PositionAutomata", "automata_match"]
+__all__ = [
+    "Automata",
+    "FollowAutomata",
+    "MarkBeforeAutomata",
+    "PositionAutomata",
+    "automata_match",
+]
 
 from abc import ABC, abstractmethod
 from automata.parser import Parser
@@ -14,27 +20,9 @@ class Automata(ABC, Generic[T]):
     def from_node(cls, node: Node) -> Self:
         raise NotImplementedError
 
-    @property
     @abstractmethod
-    def final(self) -> set[T]:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def initial(self) -> set[T]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def transition(self, state: T, symbol: str) -> set[T]:
-        raise NotImplementedError
-
     def accepts(self, word: str) -> bool:
-        states = self.initial
-        for symbol in word:
-            if len(states) == 0:
-                return False
-            states = {t for s in states for t in self.transition(s, symbol)}
-        return len(states.intersection(self.final)) > 0
+        raise NotImplementedError
 
 
 class PositionAutomata(Automata):
@@ -62,6 +50,14 @@ class PositionAutomata(Automata):
         else:
             follow_i = {j for i, j in self.follow if i == state}
         return {j for j in follow_i if self.pos[j] == symbol}
+
+    def accepts(self, word: str) -> bool:
+        states = self.initial
+        for symbol in word:
+            if len(states) == 0:
+                return False
+            states = {t for s in states for t in self.transition(s, symbol)}
+        return len(states.intersection(self.final)) > 0
 
 
 FollowState: TypeAlias = tuple[frozenset[int], bool]
@@ -98,6 +94,50 @@ class FollowAutomata(Automata):
     def transition(self, state: FollowState, symbol: str) -> set[FollowState]:
         select = {i for i in state[0] if self.pos[i] == symbol}
         return {self.states[j] for j in select}
+
+    def accepts(self, word: str) -> bool:
+        states = self.initial
+        for symbol in word:
+            if len(states) == 0:
+                return False
+            states = {t for s in states for t in self.transition(s, symbol)}
+        return len(states.intersection(self.final)) > 0
+
+
+MBState: TypeAlias = tuple[set[int], bool]
+
+
+class MarkBeforeAutomata(Automata):
+    def __init__(self, node: Node) -> None:
+        self.pos = node.pos()
+        self.first = node.first()
+        self.last_0 = node.last_0()
+        self.follow = node.follow()
+
+    def follow_i(self, idx: int) -> set[int]:
+        return {j for i, j in self.follow if i == idx}
+
+    def follow_set(self, s: set[int]) -> set[int]:
+        return {j for idx in s for j in self.follow_i(idx)}
+
+    def set_finality(self, s: set[int]) -> bool:
+        return any(i in self.last_0 for i in s)
+
+    def transition(self, state: MBState, symbol: str) -> MBState:
+        select = {i for i in state[0] if self.pos[i] == symbol}
+        return self.follow_set(select), self.set_finality(select)
+
+    @classmethod
+    def from_node(cls, node: Node) -> Self:
+        return cls(node)
+
+    def accepts(self, word: str) -> bool:
+        follow_set, final = self.first, 0 in self.last_0
+        for symbol in word:
+            if len(follow_set) == 0:
+                return False
+            follow_set, final = self.transition((follow_set, final), symbol)
+        return final
 
 
 def automata_match(pattern: str, string: str, engine: type[Automata]) -> bool:
