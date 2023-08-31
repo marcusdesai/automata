@@ -31,8 +31,10 @@ Expect the `main` branch of this repo to be updated as I publish more posts in t
 
 - Part 1: [Understanding Position Automata][part-1] (no companion code)
 - Part 2: [Implementing Position Automata][part-2] (`2-implementing-pos-automata`)
-- Part 3: Follow Automata (`3-follow-automata`)
+- Part 3: [Follow Automata][part-3] (`3-follow-automata`)
+- Part 4: Mark Before Automata (`4-mark-before-automata`)
 
 [automata]: https://en.wikipedia.org/wiki/Automata_theory
 [part-1]: https://blog.mrcsd.com/2023/Aug/position-automata
 [part-2]: https://blog.mrcsd.com/2023/Aug/implementing-pos-automata
+[part-3]: https://blog.mrcsd.com/2023/Aug/follow-automata
