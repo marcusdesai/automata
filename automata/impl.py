@@ -36,14 +36,6 @@ class PositionAutomata(Automata):
     def from_node(cls, node: Node) -> Self:
         return cls(node)
 
-    @property
-    def initial(self) -> set[int]:
-        return {0}
-
-    @property
-    def final(self) -> set[int]:
-        return self.last_0
-
     def transition(self, state: int, symbol: str) -> set[int]:
         if state == 0:
             follow_i = self.first
@@ -52,12 +44,12 @@ class PositionAutomata(Automata):
         return {j for j in follow_i if self.pos[j] == symbol}
 
     def accepts(self, word: str) -> bool:
-        states = self.initial
+        states = {0}
         for symbol in word:
             if len(states) == 0:
                 return False
             states = {t for s in states for t in self.transition(s, symbol)}
-        return len(states.intersection(self.final)) > 0
+        return len(states.intersection(self.last_0)) > 0
 
 
 FollowState: TypeAlias = tuple[frozenset[int], bool]
@@ -83,25 +75,17 @@ class FollowAutomata(Automata):
     def from_node(cls, node: Node) -> Self:
         return cls(node)
 
-    @property
-    def final(self) -> set[FollowState]:
-        return self.final_set
-
-    @property
-    def initial(self) -> set[FollowState]:
-        return {self.init}
-
     def transition(self, state: FollowState, symbol: str) -> set[FollowState]:
         select = {i for i in state[0] if self.pos[i] == symbol}
         return {self.states[j] for j in select}
 
     def accepts(self, word: str) -> bool:
-        states = self.initial
+        states = {self.init}
         for symbol in word:
             if len(states) == 0:
                 return False
             states = {t for s in states for t in self.transition(s, symbol)}
-        return len(states.intersection(self.final)) > 0
+        return len(states.intersection(self.final_set)) > 0
 
 
 MBState: TypeAlias = tuple[set[int], bool]
@@ -113,6 +97,10 @@ class MarkBeforeAutomata(Automata):
         self.first = node.first()
         self.last_0 = node.last_0()
         self.follow = node.follow()
+
+    @classmethod
+    def from_node(cls, node: Node) -> Self:
+        return cls(node)
 
     def follow_i(self, idx: int) -> set[int]:
         return {j for i, j in self.follow if i == idx}
@@ -126,10 +114,6 @@ class MarkBeforeAutomata(Automata):
     def transition(self, state: MBState, symbol: str) -> MBState:
         select = {i for i in state[0] if self.pos[i] == symbol}
         return self.follow_set(select), self.set_finality(select)
-
-    @classmethod
-    def from_node(cls, node: Node) -> Self:
-        return cls(node)
 
     def accepts(self, word: str) -> bool:
         follow_set, final = self.first, 0 in self.last_0
