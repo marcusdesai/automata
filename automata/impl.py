@@ -1,7 +1,7 @@
 __all__ = [
     "Automata",
-    "DetFollowAutomata",
-    "DetPositionAutomata",
+    "DeterministicFollowAutomata",
+    "DeterministicPositionAutomata",
     "FollowAutomata",
     "MarkBeforeAutomata",
     "McNaughtonYamadaAutomata",
@@ -108,7 +108,7 @@ class PositionAutomata(Automata):
         return len(states.intersection(self.last_0)) > 0
 
 
-class DetPositionAutomata(PositionAutomata, DFA):
+class DeterministicPositionAutomata(PositionAutomata, DFA):
     def __init__(self, node: Node) -> None:
         super().__init__(node)
 
@@ -224,7 +224,7 @@ class FollowAutomata(Automata):
         return len(set(self.states.values()))
 
 
-class DetFollowAutomata(FollowAutomata, DFA):
+class DeterministicFollowAutomata(FollowAutomata, DFA):
     def __init__(self, node: Node) -> None:
         super().__init__(node)
 

@@ -67,6 +67,9 @@ ignore = [
     "ANN101", "ANN102",
     # Ignore use of unicode math symbols
     "RUF003",
+    # It's fine to use dict() constructor when constructing kwargs sets outside
+    # of a function.
+    "C408"
 ]
 
 # Same as Black.

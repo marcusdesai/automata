@@ -11,8 +11,8 @@ ENGINES = [
     FollowAutomata,
     MarkBeforeAutomata,
     McNaughtonYamadaAutomata,
-    DetFollowAutomata,
-    DetPositionAutomata,
+    DeterministicFollowAutomata,
+    DeterministicPositionAutomata,
 ]
 
 REGEX_NON_MATCHES = {
