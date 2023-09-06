@@ -164,14 +164,8 @@ class FollowState:
 
 
 class FollowAutomata(Automata[FollowState]):
-    @property
-    def initial(self) -> FollowState:
-        return FollowState(follow=frozenset(self.first), final=0 in self.last_0)
-
     @method_cache
     def follow_state(self, idx: int) -> FollowState:
-        if idx == 0:
-            return self.initial
         return FollowState(follow=self.follow_i(idx), final=idx in self.last_0)
 
     @method_cache
@@ -179,7 +173,7 @@ class FollowAutomata(Automata[FollowState]):
         return {self.follow_state(j) for j in self.select(state, symbol)}
 
     def accepts(self, word: str) -> bool:
-        states = {self.initial}
+        states = {self.follow_state(0)}
         for symbol in word:
             if len(states) == 0:
                 return False
@@ -194,10 +188,10 @@ class FollowAutomata(Automata[FollowState]):
         return len(self.all_states())
 
 
-class DeterministicFollowAutomata(FollowAutomata, DFA[frozenset[FollowState]]):
+class DeterministicFollowAutomata(DFA[frozenset[FollowState]], FollowAutomata):
     @property
     def initial(self) -> frozenset[FollowState]:
-        return frozenset([super().initial])
+        return frozenset([self.follow_state(0)])
 
     @method_cache
     def transition(self, state: frozenset[FollowState], symbol: str) -> frozenset[FollowState]:

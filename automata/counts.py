@@ -5,7 +5,7 @@ from automata.impl import (
     DeterministicPositionAutomata,
     FollowAutomata,
     MarkBeforeAutomata,
-    McNaughtonYamadaAutomata,
+    # McNaughtonYamadaAutomata,
     PositionAutomata,
 )
 from automata.parser import Parser
@@ -90,7 +90,7 @@ ENGINES: Final[list[type[Automata]]] = [
     DeterministicPositionAutomata,
     FollowAutomata,
     MarkBeforeAutomata,
-    McNaughtonYamadaAutomata
+    # McNaughtonYamadaAutomata
 ]
 
 
@@ -122,11 +122,11 @@ def write_state_counts(file: str) -> None:
 
 if __name__ == "__main__":
     rg = make_regex(
-        length=200,
-        ab_count=2,
+        length=100,
+        ab_count=0,
         star_chance=0.15,
-        alt_chance=0.05,
-        group_chance=0.05,
+        alt_chance=0.15,
+        group_chance=0.15,
     )
     print(rg)
     print()
@@ -137,6 +137,6 @@ if __name__ == "__main__":
     print(MarkBeforeAutomata(n).count_states())
     print(DeterministicFollowAutomata(n).count_states())
     print(DeterministicPositionAutomata(n).count_states())
-    print(McNaughtonYamadaAutomata(n).count_states())
+    # print(McNaughtonYamadaAutomata(n).count_states())
 
     # write_state_counts("../state_counts.csv")
