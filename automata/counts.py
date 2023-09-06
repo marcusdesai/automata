@@ -6,6 +6,7 @@ from automata.impl import (
     FollowAutomata,
     MarkBeforeAutomata,
     McNaughtonYamadaAutomata,
+    PositionAutomata,
 )
 from automata.parser import Parser
 from collections.abc import Iterator
@@ -84,6 +85,7 @@ CHARACTERISTICS: Final[list[dict[str, float]]] = [
 LENGTHS: Final[list[int]] = [5, 10, 20, 50, 100, 200]
 
 ENGINES: Final[list[type[Automata]]] = [
+    PositionAutomata,
     DeterministicFollowAutomata,
     DeterministicPositionAutomata,
     FollowAutomata,
@@ -98,13 +100,9 @@ def collect_state_counts() -> Iterator[dict]:
             for _ in range(10):
                 pattern = make_regex(length, **kwargs)
                 node = Parser(pattern).parse()
-                results = {
-                    "pattern": pattern,
-                    "Position": max(node.pos())
-                }
-
+                results = {"pattern": pattern}
                 for engine in ENGINES:
-                    auto = engine.from_node(node)
+                    auto = engine(node)
                     name = engine.__name__.replace("Automata", "")
                     results[name] = auto.count_states()
 
@@ -124,7 +122,7 @@ def write_state_counts(file: str) -> None:
 
 if __name__ == "__main__":
     rg = make_regex(
-        length=100,
+        length=200,
         ab_count=2,
         star_chance=0.15,
         alt_chance=0.05,
@@ -141,4 +139,4 @@ if __name__ == "__main__":
     print(DeterministicPositionAutomata(n).count_states())
     print(McNaughtonYamadaAutomata(n).count_states())
 
-    write_state_counts("../state_counts.csv")
+    # write_state_counts("../state_counts.csv")

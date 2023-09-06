@@ -12,9 +12,10 @@ __all__ = [
 from abc import ABC, abstractmethod
 from automata.parser import Parser
 from automata.tree import Node
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
-from typing import Generic, ParamSpec, Self, TypeVar
+from itertools import product
+from typing import Generic, ParamSpec, TypeVar
 
 T = TypeVar("T")
 P = ParamSpec('P')
@@ -34,25 +35,43 @@ def method_cache(func: Callable[P, T]) -> Callable[P, T]:
 
 
 class Automata(ABC, Generic[T]):
-    @classmethod
-    @abstractmethod
-    def from_node(cls, node: Node) -> Self:
-        raise NotImplementedError
+    def __init__(self, node: Node) -> None:
+        self.pos = node.pos()
+        self.first = node.first()
+        self.last_0 = node.last_0()
+        self.follow = node.follow()
+
+    @property
+    def symbols(self) -> list[str]:
+        return list(self.pos.values())
+
+    @method_cache
+    def follow_i(self, idx: int) -> frozenset[int]:
+        if idx == 0:
+            return frozenset(self.first)
+        return frozenset(j for i, j in self.follow if i == idx)
+
+    @method_cache
+    def follow_set(self, s: Iterable[int]) -> frozenset[int]:
+        return frozenset(j for idx in s for j in self.follow_i(idx))
+
+    @method_cache
+    def select(self, s: Iterable[int], symbol: str) -> frozenset[int]:
+        return frozenset(i for i in s if self.pos[i] == symbol)
 
     @abstractmethod
     def accepts(self, word: str) -> bool:
         raise NotImplementedError
 
+    @abstractmethod
+    def count_states(self) -> int:
+        raise NotImplementedError
 
-class DFA(ABC):
+
+class DFA(Automata[T], ABC):
     @property
     @abstractmethod
     def initial(self) -> T:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def symbols(self) -> list[str]:
         raise NotImplementedError
 
     @abstractmethod
@@ -63,15 +82,12 @@ class DFA(ABC):
     def all_states(self) -> set[T]:
         states = {self.initial}
         to_check = {self.initial}
-        while True:
+        while len(to_check) != 0:
             new_states = set()
-            for state in to_check:
-                for sym in self.symbols:
-                    if (new := self.transition(state, sym)) not in states:
-                        if len(new) != 0:
-                            new_states.add(new)
-            if len(new_states) == 0:
-                break
+            for state, symbol in product(to_check, self.symbols):
+                new = self.transition(state, symbol)
+                if new not in states and len(new) != 0:
+                    new_states.add(new)
             states |= new_states
             to_check = new_states
         return states
@@ -80,24 +96,13 @@ class DFA(ABC):
         return len(self.all_states())
 
 
-class PositionAutomata(Automata):
-    def __init__(self, node: Node) -> None:
-        self.pos = node.pos()
-        self.first = node.first()
-        self.last_0 = node.last_0()
-        self.follow = node.follow()
-
-    @classmethod
-    def from_node(cls, node: Node) -> Self:
-        return cls(node)
-
+class PositionAutomata(Automata[int]):
     @method_cache
-    def transition(self, state: int, symbol: str) -> set[int]:
-        if state == 0:
-            follow_i = self.first
-        else:
-            follow_i = {j for i, j in self.follow if i == state}
-        return {j for j in follow_i if self.pos[j] == symbol}
+    def transition(self, state: int, symbol: str) -> frozenset[int]:
+        return self.select(self.follow_i(state), symbol)
+
+    def count_states(self) -> int:
+        return max(self.pos)
 
     def accepts(self, word: str) -> bool:
         states = {0}
@@ -108,17 +113,10 @@ class PositionAutomata(Automata):
         return len(states.intersection(self.last_0)) > 0
 
 
-class DeterministicPositionAutomata(PositionAutomata, DFA):
-    def __init__(self, node: Node) -> None:
-        super().__init__(node)
-
+class DeterministicPositionAutomata(DFA[frozenset[int]]):
     @property
     def initial(self) -> frozenset[int]:
         return frozenset([0])
-
-    @property
-    def symbols(self) -> list[str]:
-        return list(self.pos.values())
 
     @method_cache
     def transition(self, state: frozenset[int], symbol: str) -> frozenset[int]:
@@ -135,38 +133,14 @@ class DeterministicPositionAutomata(PositionAutomata, DFA):
         return any(s in self.last_0 for s in state)
 
 
-class McNaughtonYamadaAutomata(Automata, DFA):
-    def __init__(self, node: Node) -> None:
-        self.pos = node.pos()
-        self.first = node.first()
-        self.last_0 = node.last_0()
-        self.follow = node.follow()
-
-    @classmethod
-    def from_node(cls, node: Node) -> Self:
-        return cls(node)
-
+class McNaughtonYamadaAutomata(DFA[frozenset[int]]):
     @property
     def initial(self) -> frozenset[int]:
         return frozenset([0])
 
-    @property
-    def symbols(self) -> list[str]:
-        return list(self.pos.values())
-
-    @method_cache
-    def follow_i(self, idx: int) -> frozenset[int]:
-        if idx == 0:
-            return frozenset(self.first)
-        return frozenset(j for i, j in self.follow if i == idx)
-
-    @method_cache
-    def follow_set(self, s: frozenset[int]) -> frozenset[int]:
-        return frozenset(j for idx in s for j in self.follow_i(idx))
-
     @method_cache
     def transition(self, state: frozenset[int], symbol: str) -> frozenset[int]:
-        return frozenset(i for i in self.follow_set(state) if self.pos[i] == symbol)
+        return self.select(self.follow_set(state), symbol)
 
     def accepts(self, word: str) -> bool:
         state = self.initial
@@ -189,52 +163,41 @@ class FollowState:
         return iter(self.follow)
 
 
-class FollowAutomata(Automata):
-    def __init__(self, node: Node) -> None:
-        self.pos = node.pos()
-        self.first = node.first()
-        self.last_0 = node.last_0()
-        self.follow = node.follow()
+class FollowAutomata(Automata[FollowState]):
+    @property
+    def initial(self) -> FollowState:
+        return FollowState(follow=frozenset(self.first), final=0 in self.last_0)
 
-        self.init = FollowState(follow=frozenset(self.first), final=0 in self.last_0)
-
-        self.states = {0: self.init}
-        for idx in node.pos():
-            f_set = frozenset({j for i, j in self.follow if i == idx})
-            self.states[idx] = FollowState(follow=f_set, final=idx in self.last_0)
-
-    @classmethod
-    def from_node(cls, node: Node) -> Self:
-        return cls(node)
+    @method_cache
+    def follow_state(self, idx: int) -> FollowState:
+        if idx == 0:
+            return self.initial
+        return FollowState(follow=self.follow_i(idx), final=idx in self.last_0)
 
     @method_cache
     def transition(self, state: FollowState, symbol: str) -> set[FollowState]:
-        select = {i for i in state if self.pos[i] == symbol}
-        return {self.states[j] for j in select}
+        return {self.follow_state(j) for j in self.select(state, symbol)}
 
     def accepts(self, word: str) -> bool:
-        states = {self.init}
+        states = {self.initial}
         for symbol in word:
             if len(states) == 0:
                 return False
             states = {t for s in states for t in self.transition(s, symbol)}
         return any(s.final for s in states)
 
+    @method_cache
+    def all_states(self) -> set[FollowState]:
+        return {self.follow_state(i) for i in [0, *self.pos]}
+
     def count_states(self) -> int:
-        return len(set(self.states.values()))
+        return len(self.all_states())
 
 
-class DeterministicFollowAutomata(FollowAutomata, DFA):
-    def __init__(self, node: Node) -> None:
-        super().__init__(node)
-
+class DeterministicFollowAutomata(FollowAutomata, DFA[frozenset[FollowState]]):
     @property
     def initial(self) -> frozenset[FollowState]:
-        return frozenset([self.init])
-
-    @property
-    def symbols(self) -> list[str]:
-        return list(self.pos.values())
+        return frozenset([super().initial])
 
     @method_cache
     def transition(self, state: frozenset[FollowState], symbol: str) -> frozenset[FollowState]:
@@ -243,7 +206,7 @@ class DeterministicFollowAutomata(FollowAutomata, DFA):
         )
 
     def accepts(self, word: str) -> bool:
-        state = frozenset([self.init])
+        state = self.initial
         for symbol in word:
             if len(state) == 0:
                 return False
@@ -251,43 +214,18 @@ class DeterministicFollowAutomata(FollowAutomata, DFA):
         return any(s.final for s in state)
 
 
-class MarkBeforeAutomata(Automata, DFA):
-    def __init__(self, node: Node) -> None:
-        self.pos = node.pos()
-        self.first = frozenset(node.first())
-        self.last_0 = node.last_0()
-        self.follow = node.follow()
-
-    @classmethod
-    def from_node(cls, node: Node) -> Self:
-        return cls(node)
-
-    @method_cache
-    def follow_i(self, idx: int) -> frozenset[int]:
-        # weird that mark before doesn't seem to need the 0 follow set...
-        if idx == 0:
-            return self.first
-        return frozenset(j for i, j in self.follow if i == idx)
-
-    @method_cache
-    def follow_set(self, s: frozenset[int]) -> frozenset[int]:
-        return frozenset(j for idx in s for j in self.follow_i(idx))
-
+class MarkBeforeAutomata(DFA[FollowState]):
     @method_cache
     def set_finality(self, s: frozenset[int]) -> bool:
         return any(i in self.last_0 for i in s)
 
     @property
     def initial(self) -> FollowState:
-        return FollowState(follow=self.first, final=0 in self.last_0)
-
-    @property
-    def symbols(self) -> list[str]:
-        return list(self.pos.values())
+        return FollowState(follow=frozenset(self.first), final=0 in self.last_0)
 
     @method_cache
     def transition(self, state: FollowState, symbol: str) -> FollowState:
-        select = frozenset(i for i in state if self.pos[i] == symbol)
+        select = self.select(state, symbol)
         return FollowState(follow=self.follow_set(select), final=self.set_finality(select))
 
     def accepts(self, word: str) -> bool:
@@ -304,5 +242,5 @@ def automata_match(pattern: str, string: str, engine: type[Automata]) -> bool:
     if pattern == "":
         return string == ""
     node = Parser(pattern).parse()
-    auto = engine.from_node(node)
+    auto = engine(node)
     return auto.accepts(string)
