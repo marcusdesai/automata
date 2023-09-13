@@ -6,14 +6,19 @@ from automata.parser import Parser
 from automata.tree import *
 from collections.abc import Iterator
 
-ENGINES = [
-    PositionAutomata,
-    FollowAutomata,
-    MarkBeforeAutomata,
-    McNaughtonYamadaAutomata,
-    DeterministicFollowAutomata,
-    DeterministicPositionAutomata,
-]
+# noinspection DuplicatedCode
+ENGINES = {
+    "Position": lambda n: PositionAutomata(n).nfa(),
+    "PositionDeterminised": lambda n: PositionAutomata(n).nfa().subset_determinise(),
+    "PositionMinimized": lambda n: PositionAutomata.minimize(n),
+    "McNaughtonYamada": lambda n: McNaughtonYamadaAutomata(n).dfa(),
+    "McNaughtonYamadaMinimized": lambda n: McNaughtonYamadaAutomata.minimize(n),
+    "Follow": lambda n: FollowAutomata(n).nfa(),
+    "FollowDeterminised": lambda n: FollowAutomata(n).nfa().subset_determinise(),
+    "FollowMinimized": lambda n: FollowAutomata.minimize(n),
+    "MarkBefore": lambda n: MarkBeforeAutomata(n).dfa(),
+    "MarkBeforeMinimized": lambda n: MarkBeforeAutomata.minimize(n),
+}
 
 REGEX_NON_MATCHES = {
     "a": ["b"],
@@ -24,16 +29,17 @@ REGEX_NON_MATCHES = {
 }
 
 
-def generate_non_matches() -> Iterator[tuple[str, str, type[Automata]]]:
+def generate_non_matches() -> Iterator[tuple[str, str, str, Automata]]:
     for pattern, matches in REGEX_NON_MATCHES.items():
+        node = Parser(pattern).parse()
         for match in matches:
-            for engine in ENGINES:
-                yield pattern, match, engine
+            for name, make_automata in ENGINES.items():
+                yield pattern, match, name, make_automata(node)
 
 
-@pytest.mark.parametrize("pattern, non_match, engine", generate_non_matches())
-def test_non_matches(pattern: str, non_match: str, engine: type[Automata]):
-    assert not automata_match(pattern, non_match, engine)
+@pytest.mark.parametrize("pattern, non_match, name, automata", generate_non_matches())
+def test_non_matches(pattern: str, non_match: str, name: str, automata: Automata):
+    assert not automata.accepts(non_match)
 
 
 PATTERNS = {
@@ -61,24 +67,19 @@ PATTERNS = {
 }
 
 
-def generate_matches(amount: int) -> Iterator[tuple[str, str, type[Automata]]]:
+def generate_matches(amount: int) -> Iterator[tuple[str, str, str, Automata]]:
     for pattern in PATTERNS:
         node = Parser(pattern).parse()
         for match in {make_match(node, 5) for _ in range(amount)}:
-            for engine in ENGINES:
-                yield pattern, match, engine
+            for name, make_automata in ENGINES.items():
+                yield pattern, match, name, make_automata(node)
 
 
-@pytest.mark.parametrize("pattern, match, engine", generate_matches(10))
-def test_generated_matches(pattern: str, match: str, engine: type[Automata]):
+@pytest.mark.parametrize("pattern, match, name, automata", generate_matches(10))
+def test_generated_matches(pattern: str, match: str, name: str, automata: Automata):
     # Always check conformance to Python's stdlib regex matching
     assert re.match(pattern, match) is not None
-    assert automata_match(pattern, match, engine=engine)
-
-
-@pytest.mark.parametrize("engine", ENGINES)
-def test_empty_pattern_match(engine: type[Automata]):
-    assert automata_match("", "", engine=engine)
+    assert automata.accepts(match)
 
 
 # Utils and tests for them

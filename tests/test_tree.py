@@ -8,7 +8,8 @@ TREES = {
         "first": {1},
         "last_0": {2},
         "follow": {(1, 2)},
-        "pos": {1: "a", 2: "b"}
+        "pos": {1: "a", 2: "b"},
+        "reverse": Concat(Symbol("b", 2), Symbol("a", 1)),
     },
 
     # a*b
@@ -17,7 +18,8 @@ TREES = {
         "first": {1, 2},
         "last_0": {2},
         "follow": {(1, 1), (1, 2)},
-        "pos": {1: "a", 2: "b"}
+        "pos": {1: "a", 2: "b"},
+        "reverse": Concat(Symbol("b", 2), Star(Symbol("a", 1))),
     },
 
     # ab*
@@ -26,7 +28,8 @@ TREES = {
         "first": {1},
         "last_0": {1, 2},
         "follow": {(1, 2), (2, 2)},
-        "pos": {1: "a", 2: "b"}
+        "pos": {1: "a", 2: "b"},
+        "reverse": Concat(Star(Symbol("b", 2)), Symbol("a", 1)),
     },
 
     # a|b
@@ -35,7 +38,8 @@ TREES = {
         "first": {1, 2},
         "last_0": {1, 2},
         "follow": set(),
-        "pos": {1: "a", 2: "b"}
+        "pos": {1: "a", 2: "b"},
+        "reverse": Alt(Symbol("b", 2), Symbol("a", 1)),
     },
 
     # a(ba*b)*
@@ -49,7 +53,11 @@ TREES = {
         "follow": {
             (1, 2), (2, 3), (2, 4), (3, 3), (3, 4), (4, 2)
         },
-        "pos": {1: "a", 2: "b", 3: "a", 4: "b"}
+        "pos": {1: "a", 2: "b", 3: "a", 4: "b"},
+        "reverse": Concat(
+            Star(Concat(Concat(Symbol("b", 4), Star(Symbol("a", 3))), Symbol("b", 2))),
+            Symbol("a", 1)
+        ),
     },
 
     # a|b*a
@@ -58,7 +66,8 @@ TREES = {
         "first": {1, 2, 3},
         "last_0": {3},
         "follow": {(1, 3), (2, 2), (2, 3)},
-        "pos": {1: "a", 2: "b", 3: "a"}
+        "pos": {1: "a", 2: "b", 3: "a"},
+        "reverse": Concat(Symbol("a", 3), Alt(Star(Symbol("b", 2)), Symbol("a", 1))),
     },
 
     # a*b*
@@ -67,7 +76,8 @@ TREES = {
         "first": {1, 2},
         "last_0": {0, 1, 2},
         "follow": {(1, 1), (1, 2), (2, 2)},
-        "pos": {1: "a", 2: "b"}
+        "pos": {1: "a", 2: "b"},
+        "reverse": Concat(Star(Symbol("b", 2)), Star(Symbol("a", 1))),
     },
 }
 
@@ -92,3 +102,7 @@ class Tests:
     @pytest.mark.parametrize("node, pos", ((n, d["pos"]) for n, d in TREES.items()))
     def test_pos(self, node: Node, pos: dict[int, str]):
         assert node.pos() == pos
+
+    @pytest.mark.parametrize("node, reverse", ((n, d["reverse"]) for n, d in TREES.items()))
+    def test_reverse(self, node: Node, reverse: Node):
+        assert node.reverse() == reverse

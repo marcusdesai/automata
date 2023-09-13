@@ -1,11 +1,8 @@
 import csv
 from automata.impl import (
-    Automata,
-    DeterministicFollowAutomata,
-    DeterministicPositionAutomata,
     FollowAutomata,
     MarkBeforeAutomata,
-    # McNaughtonYamadaAutomata,
+    McNaughtonYamadaAutomata,
     PositionAutomata,
 )
 from automata.parser import Parser
@@ -84,14 +81,19 @@ CHARACTERISTICS: Final[list[dict[str, float]]] = [
 
 LENGTHS: Final[list[int]] = [5, 10, 20, 50, 100, 200]
 
-ENGINES: Final[list[type[Automata]]] = [
-    PositionAutomata,
-    DeterministicFollowAutomata,
-    DeterministicPositionAutomata,
-    FollowAutomata,
-    MarkBeforeAutomata,
-    # McNaughtonYamadaAutomata
-]
+# noinspection DuplicatedCode
+ENGINES = {
+    "Position": lambda n: PositionAutomata(n).nfa(),
+    "PositionDeterminised": lambda n: PositionAutomata(n).nfa().subset_determinise(),
+    "PositionMinimized": lambda n: PositionAutomata.minimize(n),
+    "McNaughtonYamada": lambda n: McNaughtonYamadaAutomata(n).dfa(),
+    "McNaughtonYamadaMinimized": lambda n: McNaughtonYamadaAutomata.minimize(n),
+    "Follow": lambda n: FollowAutomata(n).nfa(),
+    "FollowDeterminised": lambda n: FollowAutomata(n).nfa().subset_determinise(),
+    "FollowMinimized": lambda n: FollowAutomata.minimize(n),
+    "MarkBefore": lambda n: MarkBeforeAutomata(n).dfa(),
+    "MarkBeforeMinimized": lambda n: MarkBeforeAutomata.minimize(n),
+}
 
 
 def collect_state_counts() -> Iterator[dict]:
@@ -101,11 +103,8 @@ def collect_state_counts() -> Iterator[dict]:
                 pattern = make_regex(length, **kwargs)
                 node = Parser(pattern).parse()
                 results = {"pattern": pattern}
-                for engine in ENGINES:
-                    auto = engine(node)
-                    name = engine.__name__.replace("Automata", "")
-                    results[name] = auto.count_states()
-
+                for name, make_automata in ENGINES.items():
+                    results[name] = make_automata(node).count_states()
                 yield results
 
 
@@ -122,21 +121,18 @@ def write_state_counts(file: str) -> None:
 
 if __name__ == "__main__":
     rg = make_regex(
-        length=100,
+        length=200,
         ab_count=0,
         star_chance=0.15,
-        alt_chance=0.15,
+        alt_chance=0.2,
         group_chance=0.15,
     )
     print(rg)
     print()
-    n = Parser(rg).parse()
-    print(max(n.pos()), len(set(n.pos().values())), set(n.pos().values()))
+    nd = Parser(rg).parse()
+    print(max(nd.pos()), len(set(nd.pos().values())), set(nd.pos().values()))
 
-    print(FollowAutomata(n).count_states())
-    print(MarkBeforeAutomata(n).count_states())
-    print(DeterministicFollowAutomata(n).count_states())
-    print(DeterministicPositionAutomata(n).count_states())
-    # print(McNaughtonYamadaAutomata(n).count_states())
+    for _name, _make_automata in ENGINES.items():
+        print(_name, _make_automata(nd).count_states())
 
     # write_state_counts("../state_counts.csv")

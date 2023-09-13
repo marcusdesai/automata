@@ -3,6 +3,7 @@ __all__ = ["Node", "Symbol", "Star", "Concat", "Alt"]
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import product
+from typing import Self
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,10 @@ class Node(ABC):
     def pos(self) -> dict[int, str]:
         raise NotImplementedError
 
+    @abstractmethod
+    def reverse(self) -> Self:
+        raise NotImplementedError
+
 
 @dataclass(frozen=True)
 class Symbol(Node):
@@ -53,6 +58,9 @@ class Symbol(Node):
     def pos(self) -> dict[int, str]:
         return {self.index: self.value}
 
+    def reverse(self) -> Self:
+        return self
+
 
 @dataclass(frozen=True)
 class Star(Node):
@@ -73,6 +81,9 @@ class Star(Node):
 
     def pos(self) -> dict[int, str]:
         return self.child.pos()
+
+    def reverse(self) -> Self:
+        return Star(self.child.reverse())
 
 
 @dataclass(frozen=True)
@@ -100,6 +111,9 @@ class Concat(Node):
     def pos(self) -> dict[int, str]:
         return self.left.pos() | self.right.pos()
 
+    def reverse(self) -> Self:
+        return Concat(self.right.reverse(), self.left.reverse())
+
 
 @dataclass(frozen=True)
 class Alt(Node):
@@ -120,3 +134,6 @@ class Alt(Node):
 
     def pos(self) -> dict[int, str]:
         return self.left.pos() | self.right.pos()
+
+    def reverse(self) -> Self:
+        return Alt(self.right.reverse(), self.left.reverse())
