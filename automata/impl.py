@@ -1,4 +1,5 @@
 __all__ = [
+    "ENGINES",
     "Automata",
     "FollowAutomata",
     "MarkBeforeAutomata",
@@ -11,7 +12,7 @@ from automata.tree import Node
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 from itertools import product
-from typing import Generic, ParamSpec, TypeVar
+from typing import Final, Generic, ParamSpec, TypeVar
 
 T = TypeVar("T")
 P = ParamSpec('P')
@@ -82,10 +83,12 @@ class FromNodeNFA(FromNode[T], ABC):
             states=self.states(),
         )
 
+    def determinise(self) -> 'DFA':
+        return self.nfa().subset_determinise()
+
     @classmethod
     def minimize(cls, node: Node) -> 'DFA':
-        self = cls(node.reverse())
-        return self.nfa().subset_determinise().reverse().subset_determinise()
+        return cls(node.reverse()).determinise().reverse().subset_determinise()
 
 
 class FromNodeDFA(FromNode[T], ABC):
@@ -287,7 +290,7 @@ class FollowAutomata(FromNodeNFA):
         return state.final
 
     @method_cache
-    def states(self) -> set[FollowState]:
+    def states(self) -> set[FollowState] | None:
         return {self.follow_state(i) for i in [0, *self.pos]}
 
 
@@ -306,3 +309,17 @@ class MarkBeforeAutomata(FromNodeDFA):
 
     def is_final(self, state: FollowState) -> bool:
         return state.final
+
+
+ENGINES: Final[dict[str, Callable[[Node], Automata]]] = {
+    "Position": lambda n: PositionAutomata(n).nfa(),
+    "PositionDeterminised": lambda n: PositionAutomata(n).determinise(),
+    "PositionMinimized": lambda n: PositionAutomata.minimize(n),
+    "McNaughtonYamada": lambda n: McNaughtonYamadaAutomata(n).dfa(),
+    "McNaughtonYamadaMinimized": lambda n: McNaughtonYamadaAutomata.minimize(n),
+    "Follow": lambda n: FollowAutomata(n).nfa(),
+    "FollowDeterminised": lambda n: FollowAutomata(n).determinise(),
+    "FollowMinimized": lambda n: FollowAutomata.minimize(n),
+    "MarkBefore": lambda n: MarkBeforeAutomata(n).dfa(),
+    "MarkBeforeMinimized": lambda n: MarkBeforeAutomata.minimize(n),
+}

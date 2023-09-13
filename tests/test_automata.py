@@ -1,24 +1,10 @@
 import pytest
 import random
 import re
-from automata.impl import *
+from automata.impl import ENGINES, Automata
 from automata.parser import Parser
 from automata.tree import *
 from collections.abc import Iterator
-
-# noinspection DuplicatedCode
-ENGINES = {
-    "Position": lambda n: PositionAutomata(n).nfa(),
-    "PositionDeterminised": lambda n: PositionAutomata(n).nfa().subset_determinise(),
-    "PositionMinimized": lambda n: PositionAutomata.minimize(n),
-    "McNaughtonYamada": lambda n: McNaughtonYamadaAutomata(n).dfa(),
-    "McNaughtonYamadaMinimized": lambda n: McNaughtonYamadaAutomata.minimize(n),
-    "Follow": lambda n: FollowAutomata(n).nfa(),
-    "FollowDeterminised": lambda n: FollowAutomata(n).nfa().subset_determinise(),
-    "FollowMinimized": lambda n: FollowAutomata.minimize(n),
-    "MarkBefore": lambda n: MarkBeforeAutomata(n).dfa(),
-    "MarkBeforeMinimized": lambda n: MarkBeforeAutomata.minimize(n),
-}
 
 REGEX_NON_MATCHES = {
     "a": ["b"],
@@ -80,6 +66,16 @@ def test_generated_matches(pattern: str, match: str, name: str, automata: Automa
     # Always check conformance to Python's stdlib regex matching
     assert re.match(pattern, match) is not None
     assert automata.accepts(match)
+
+
+@pytest.mark.parametrize("pattern", PATTERNS)
+def test_equal_minimized_state_counts(pattern: str):
+    node = Parser(pattern).parse()
+    pos_min = ENGINES["PositionMinimized"](node).count_states()
+    my_min = ENGINES["McNaughtonYamadaMinimized"](node).count_states()
+    fol_min = ENGINES["FollowMinimized"](node).count_states()
+    mb_min = ENGINES["MarkBeforeMinimized"](node).count_states()
+    assert pos_min == my_min == fol_min == mb_min
 
 
 # Utils and tests for them
